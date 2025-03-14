@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.ArrayList;
 import java.util.TreeMap;
 
 import okhttp3.Response;
@@ -567,8 +568,8 @@ public class XiaoyaProxyHandler {
 
         Drive drive = new Drive("测试");
         List<String> lines = new LazyFileList("/storage/emulated/0/TV/index.all.txt");
-        List<Vod> list1 = XiaoyaLocalIndex.toVods(drive, lines);
-        Logger.log(list1.get(0));
+        List<Vod> vods = XiaoyaLocalIndex.toVods(drive, lines);
+        Logger.log(vods.get(0));
 
         List<Vod> filteredVods = new ArrayList<>();
         long startTime = System.currentTimeMillis();
