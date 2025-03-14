@@ -168,7 +168,7 @@ public class FileBasedList<T> implements List<T> {
             for (T item : buffer) {
                 linePositions.add(currentPosition); // 记录新行的起始位置
                 String json = gson.toJson(item) + "\n";
-                bytes bb[] = json.getBytes(StandardCharsets.UTF_8);
+                byte[] bb = json.getBytes(StandardCharsets.UTF_8);
                 writer.write(bb);
                 currentPosition += bb.length; // 更新当前位置
             }
