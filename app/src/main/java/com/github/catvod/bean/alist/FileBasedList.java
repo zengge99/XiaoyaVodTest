@@ -34,6 +34,16 @@ public class FileBasedList<T> implements List<T> {
         }
     }
 
+    // 不带文件名的构造函数，自动生成随机文件名
+    public FileBasedList(Class<T> type) {
+        this(generateRandomFileName(), type);
+    }
+
+    // 生成随机文件名
+    private static String generateRandomFileName() {
+        return UUID.randomUUID().toString() + ".list"; // 生成 UUID 并添加 .list 后缀
+    }
+
     /**
      * 初始化文件位置和大小
      */
