@@ -566,7 +566,7 @@ public class XiaoyaProxyHandler {
         Logger.log("索引：" + il.getLineNumber() + " 内容：" + il.getItem());
 
         List<String> lines = new LazyFileList("/storage/emulated/0/TV/index.all.txt");
-        FileBasedList<Vod> list1 = XiaoyaLocalIndex.toVods(new Drive("测试"), lines);
+        List<Vod> list1 = XiaoyaLocalIndex.toVods(new Drive("测试"), lines);
         Logger.log(list1.get(0));
     }
 }
