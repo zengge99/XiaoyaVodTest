@@ -40,6 +40,7 @@ import com.github.catvod.*;
 import com.github.catvod.bean.alist.FileBasedList;
 import com.github.catvod.bean.alist.XiaoyaLocalIndex;
 import com.github.catvod.bean.alist.LazyFileList;
+import com.github.catvod.bean.alist.Drive;
 import java.util.stream.Collectors;
 
 public class XiaoyaProxyHandler {
