@@ -5,6 +5,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Map;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.TreeMap;
 
@@ -522,7 +523,7 @@ public class XiaoyaProxyHandler {
                     test();
                 } catch (Exception e) {
                 }
-                
+
                 return new Object[] { 200, "text/plain; charset=utf-8",
                         new ByteArrayInputStream("ok".getBytes("UTF-8")) };
             default:
@@ -542,10 +543,20 @@ public class XiaoyaProxyHandler {
 
     private static void test() {
         Logger.log("test");
-        List<String> list = new FileBasedList<>("/storage/emulated/0/TV/list.txt", String.class);
+    
+        // 直接使用 FileBasedList 类型，避免后续强制转换
+        FileBasedList<String> list = new FileBasedList<>("/storage/emulated/0/TV/list.txt", String.class);
         list.add("A");
         list.add("B");
         list.add("C");
-        Logger.log(list.get(1));
+    
+        Logger.log("第二个元素是：" + list.get(1));
+    
+        // 使用 indexedStream() 过滤并获取结果
+        FileBasedList.IndexedItem<String> il = list.indexedStream()
+                .filter(i -> i.getItem().equals("B")) // 比较 IndexedItem 的内容
+                .collect(Collectors.toList()) // 将流转换为列表
+                .get(0); // 获取第一个匹配项
+    
+        Logger.log("索引：" + il.getLineNumber() + " 内容：" + il.getItem());
     }
-}
