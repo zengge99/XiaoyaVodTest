@@ -166,14 +166,13 @@ public class FileBasedList<T> implements List<T> {
             long currentPosition = file.length(); // 获取当前文件长度作为初始位置
 
             for (T item : buffer) {
+                linePositions.add(currentPosition); // 记录新行的起始位置
                 String json = gson.toJson(item);
                 int lineLength = json.getBytes(StandardCharsets.UTF_8).length
                         + System.lineSeparator().getBytes(StandardCharsets.UTF_8).length; // 计算该行的总长度
                 writer.write(json);
                 writer.newLine(); // 写入换行符
-
                 currentPosition += lineLength; // 更新当前位置
-                linePositions.add(currentPosition); // 记录新行的起始位置
             }
 
             writer.flush(); // 最终确保所有缓冲的数据都已写入文件
