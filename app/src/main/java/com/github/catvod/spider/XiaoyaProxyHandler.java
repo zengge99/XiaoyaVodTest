@@ -565,8 +565,21 @@ public class XiaoyaProxyHandler {
 
         Logger.log("索引：" + il.getLineNumber() + " 内容：" + il.getItem());
 
+        Drive drive = new Drive("测试");
         List<String> lines = new LazyFileList("/storage/emulated/0/TV/index.all.txt");
-        List<Vod> list1 = XiaoyaLocalIndex.toVods(new Drive("测试"), lines);
+        List<Vod> list1 = XiaoyaLocalIndex.toVods(drive, lines);
         Logger.log(list1.get(0));
+
+        List<Vod> filteredVods = new ArrayList<>();
+            startTime = System.currentTimeMillis();
+            for (Vod vod : vods) {
+                if (!vod.getVodIdWithoutDrivePrefix().contains("向风而行")) {
+                    continue;
+                }
+                filteredVods.add(vod);
+            }
+            duration = System.currentTimeMillis() - startTime;
+            Logger.log("转换Vod耗时：" + duration);
+            Logger.log(filteredVods);
     }
 }
