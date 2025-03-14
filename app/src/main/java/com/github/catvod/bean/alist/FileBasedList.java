@@ -196,10 +196,48 @@ public class FileBasedList<T> implements List<T> {
 
     @Override
     public boolean addAll(Collection<? extends T> c) {
-        for (T item : c) {
-            add(item);
+        if (c instanceof FileBasedList) {
+            // 如果传入的集合是 FileBasedList 类型，直接合并文件
+            return mergeFileBasedList((FileBasedList<? extends T>) c);
+        } else {
+            // 否则，按照原来的方式逐条添加
+            for (T item : c) {
+                add(item);
+            }
+            return true;
         }
-        return true;
+    }
+    
+    /**
+     * 合并两个 FileBasedList 的文件内容
+     * @param other 另一个 FileBasedList
+     * @return 是否合并成功
+     */
+    private boolean mergeFileBasedList(FileBasedList<? extends T> other) {
+        flushBuffer(); // 确保当前缓存数据写入文件
+        if (other != this) {
+            other.flushBuffer(); // 确保另一个文件的缓存数据写入文件
+        }
+    
+        try (BufferedWriter writer = new BufferedWriter(
+                new OutputStreamWriter(new FileOutputStream(file, true), StandardCharsets.UTF_8));
+             BufferedReader reader = new BufferedReader(
+                     new InputStreamReader(new FileInputStream(other.file), StandardCharsets.UTF_8))) {
+    
+            long currentPosition = file.length(); // 获取当前文件长度作为初始位置
+            String line;
+            while ((line = reader.readLine()) != null) {
+                linePositions.add(currentPosition); // 记录新行的起始位置
+                writer.write(line); // 将另一文件的内容逐行写入当前文件
+                writer.newLine(); // 写入换行符
+                currentPosition += line.getBytes(StandardCharsets.UTF_8).length + System.lineSeparator().getBytes(StandardCharsets.UTF_8).length; // 更新当前位置
+            }
+            writer.flush(); // 确保所有数据写入文件
+            size += other.size(); // 更新列表大小
+            return true;
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to merge FileBasedList files", e);
+        }
     }
 
     @Override
