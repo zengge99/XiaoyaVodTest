@@ -7,6 +7,7 @@ import java.util.*;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
+import java.nio.charset.StandardCharsets;
 
 public class FileBasedList<T> implements List<T> {
     private final File file; // 存储数据的文件
