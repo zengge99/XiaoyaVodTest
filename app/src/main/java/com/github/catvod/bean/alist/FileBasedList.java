@@ -302,7 +302,7 @@ public class FileBasedList<T> implements List<T> {
 
     public Stream<IndexedItem<T>> indexedStream() {
         try {
-            BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(file), "UTF-8")); 
+            BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(file), "UTF-8"));
             Spliterator<IndexedItem<T>> spliterator = Spliterators
                     .spliteratorUnknownSize(new Iterator<IndexedItem<T>>() {
                         private String nextLine = reader.readLine(); // 读取第一行
