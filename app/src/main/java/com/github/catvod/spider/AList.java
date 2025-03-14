@@ -2,7 +2,7 @@ package com.github.catvod.spider;
 
 import android.content.Context;
 import android.net.Uri;
-import android.text.TextUtils;
+import android.text.TextUtils; 
 
 import com.github.catvod.bean.Class;
 import com.github.catvod.bean.Filter;
