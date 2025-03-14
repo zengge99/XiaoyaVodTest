@@ -62,12 +62,14 @@ public class FileBasedList<T> implements List<T> {
      * 初始化文件位置和大小
      */
     private void initializeLinePositions() {
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8))) {
+        try (BufferedReader reader = new BufferedReader(
+                new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8))) {
             long position = 0;
             String line;
             while ((line = reader.readLine()) != null) {
                 linePositions.add(position);
-                position += line.getBytes(StandardCharsets.UTF_8).length + System.lineSeparator().getBytes(StandardCharsets.UTF_8).length; // 更新位置
+                position += line.getBytes(StandardCharsets.UTF_8).length
+                        + System.lineSeparator().getBytes(StandardCharsets.UTF_8).length; // 更新位置
             }
             this.size = linePositions.size();
         } catch (IOException e) {
@@ -98,6 +100,7 @@ public class FileBasedList<T> implements List<T> {
     @Override
     public Iterator<T> iterator() {
         try {
+            flushBuffer();
             BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(file), "UTF-8"));
             return new Iterator<T>() {
                 private String nextLine = reader.readLine(); // 读取第一行
@@ -155,19 +158,23 @@ public class FileBasedList<T> implements List<T> {
      * 将缓存中的数据批量写入文件
      */
     private void flushBuffer() {
-    try (BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file, true), StandardCharsets.UTF_8))) {
-        for (T item : buffer) {
-            String json = gson.toJson(item);
-            writer.write(json);
-            writer.newLine(); // 写入换行符
-            linePositions.add(file.length()); // 记录新行的起始位置
+        if (buffer.size() == 0) {
+            return;
         }
-        writer.flush(); // 确保数据写入磁盘
-        buffer.clear(); // 清空缓存
-    } catch (IOException e) {
-        throw new RuntimeException("Failed to write to file", e);
+        try (BufferedWriter writer = new BufferedWriter(
+                new OutputStreamWriter(new FileOutputStream(file, true), StandardCharsets.UTF_8))) {
+            for (T item : buffer) {
+                String json = gson.toJson(item);
+                writer.write(json);
+                writer.newLine(); // 写入换行符
+                linePositions.add(file.length()); // 记录新行的起始位置
+            }
+            writer.flush(); // 确保数据写入磁盘
+            buffer.clear(); // 清空缓存
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to write to file", e);
+        }
     }
-}
 
     @Override
     public boolean remove(Object o) {
@@ -209,6 +216,7 @@ public class FileBasedList<T> implements List<T> {
 
     @Override
     public void clear() {
+        flushBuffer();
         try (FileWriter writer = new FileWriter(file)) {
             writer.write(""); // 清空文件内容
             size = 0; // 大小重置为 0
@@ -224,6 +232,7 @@ public class FileBasedList<T> implements List<T> {
         if (index < 0 || index >= size) {
             throw new IndexOutOfBoundsException("Index " + index + " is out of bounds");
         }
+        flushBuffer();
         try (RandomAccessFile randomAccessFile = new RandomAccessFile(file, "r")) {
             long position = linePositions.get(index); // 获取指定行的起始位置
             randomAccessFile.seek(position); // 跳转到指定位置
@@ -318,6 +327,7 @@ public class FileBasedList<T> implements List<T> {
 
     public Stream<IndexedItem<T>> indexedStream() {
         try {
+            flushBuffer();
             BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(file), "UTF-8"));
             Spliterator<IndexedItem<T>> spliterator = Spliterators
                     .spliteratorUnknownSize(new Iterator<IndexedItem<T>>() {
