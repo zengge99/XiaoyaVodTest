@@ -537,6 +537,7 @@ public class XiaoyaProxyHandler {
     }
 
     private static void test() {
+        Logger.log("test");
         List<String> list = new FileBasedList<>("/storage/emulated/0/TV/list.txt", String.class);
         list.add("A");
         list.add("B");
