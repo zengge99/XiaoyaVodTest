@@ -1,6 +1,7 @@
 package com.github.catvod.bean.alist;
 
 import com.google.gson.Gson;
+
 import java.io.*;
 import java.util.*;
 import java.util.function.Consumer;
@@ -50,9 +51,7 @@ public class FileBasedList<T> implements List<T> {
 
     // 生成随机文件名
     private static String generateRandomFileName() {
-        return com.github.catvod.utils.Path.root() + "/TV/list/" + UUID.randomUUID().toString() + ".list"; // 生成 UUID
-                                                                                                           // 并添加 .list
-                                                                                                           // 后缀
+        return com.github.catvod.utils.Path.root() + "/TV/list/" + UUID.randomUUID().toString() + ".list"; // 生成 UUID 并添加 .list 后缀
     }
 
     /**
@@ -73,7 +72,6 @@ public class FileBasedList<T> implements List<T> {
     }
 
     // List 接口方法实现
-
     @Override
     public int size() {
         return size;
@@ -97,7 +95,7 @@ public class FileBasedList<T> implements List<T> {
     @Override
     public Iterator<T> iterator() {
         try {
-            BufferedReader reader = new BufferedReader(new FileReader(file));
+            BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(file), "UTF-8"));
             return new Iterator<T>() {
                 private String nextLine = reader.readLine(); // 读取第一行
 
@@ -146,7 +144,7 @@ public class FileBasedList<T> implements List<T> {
             randomAccessFile.seek(randomAccessFile.length()); // 跳转到文件末尾
             long position = randomAccessFile.getFilePointer(); // 记录新行的起始位置
             String json = gson.toJson(t); // 序列化为 JSON
-            randomAccessFile.writeBytes(json + System.lineSeparator()); // 追加一行
+            randomAccessFile.write((json + System.lineSeparator()).getBytes("UTF-8")); // 追加一行，使用 UTF-8 编码
             linePositions.add(position); // 记录新行的起始位置
             size++; // 大小增加
             return true;
@@ -209,7 +207,6 @@ public class FileBasedList<T> implements List<T> {
         if (index < 0 || index >= size) {
             throw new IndexOutOfBoundsException("Index " + index + " is out of bounds");
         }
-
         try (RandomAccessFile randomAccessFile = new RandomAccessFile(file, "r")) {
             long position = linePositions.get(index); // 获取指定行的起始位置
             randomAccessFile.seek(position); // 跳转到指定位置
@@ -280,7 +277,6 @@ public class FileBasedList<T> implements List<T> {
     }
 
     // 其他方法
-
     public Stream<T> stream() {
         Spliterator<T> spliterator = Spliterators.spliteratorUnknownSize(iterator(), Spliterator.ORDERED);
         return StreamSupport.stream(spliterator, false); // 不支持并行流
@@ -306,7 +302,7 @@ public class FileBasedList<T> implements List<T> {
 
     public Stream<IndexedItem<T>> indexedStream() {
         try {
-            BufferedReader reader = new BufferedReader(new FileReader(file));
+            BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(file), "UTF-8"));
             Spliterator<IndexedItem<T>> spliterator = Spliterators
                     .spliteratorUnknownSize(new Iterator<IndexedItem<T>>() {
                         private String nextLine = reader.readLine(); // 读取第一行
@@ -330,7 +326,6 @@ public class FileBasedList<T> implements List<T> {
                             }
                         }
                     }, Spliterator.ORDERED);
-
             return StreamSupport.stream(spliterator, false); // 不支持并行流
         } catch (IOException e) {
             throw new RuntimeException("Failed to initialize indexed stream", e);
