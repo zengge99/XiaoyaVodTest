@@ -14,17 +14,20 @@ public class FileBasedList<T> implements List<T> {
     private final Class<T> type; // 泛型类型
     private int size; // 当前列表的大小
     private final List<Long> linePositions; // 记录每一行的文件位置
+    private final List<T> buffer; // 内存缓存
+    private static final int BUFFER_SIZE = 1000; // 缓存大小
 
     public FileBasedList(String filePath, Class<T> type) {
         this.file = new File(filePath);
         this.gson = new Gson();
         this.type = type;
         this.linePositions = new ArrayList<>();
+        this.buffer = new ArrayList<>(BUFFER_SIZE);
 
         // 确保文件的父目录存在，如果不存在则创建所有缺失的父目录
         File parentDir = file.getParentFile();
         if (parentDir != null && !parentDir.exists()) {
-            boolean dirsCreated = parentDir.mkdirs(); // 创建所有缺失的父目录
+            boolean dirsCreated = parentDir.mkdirs();
             if (!dirsCreated) {
                 throw new RuntimeException("Failed to create parent directories: " + parentDir.getAbsolutePath());
             }
@@ -51,19 +54,19 @@ public class FileBasedList<T> implements List<T> {
 
     // 生成随机文件名
     private static String generateRandomFileName() {
-        return com.github.catvod.utils.Path.root() + "/TV/list/" + UUID.randomUUID().toString() + ".list"; // 生成 UUID 并添加 .list 后缀
+        return com.github.catvod.utils.Path.root() + "/TV/list/" + UUID.randomUUID().toString() + ".list";
     }
 
     /**
      * 初始化文件位置和大小
      */
     private void initializeLinePositions() {
-        try (RandomAccessFile randomAccessFile = new RandomAccessFile(file, "r")) {
-            long position = randomAccessFile.getFilePointer();
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8))) {
+            long position = 0;
             String line;
-            while ((line = randomAccessFile.readLine()) != null) {
-                linePositions.add(position); // 记录当前行的起始位置
-                position = randomAccessFile.getFilePointer(); // 更新位置
+            while ((line = reader.readLine()) != null) {
+                linePositions.add(position);
+                position += line.getBytes(StandardCharsets.UTF_8).length + System.lineSeparator().getBytes(StandardCharsets.UTF_8).length; // 更新位置
             }
             this.size = linePositions.size();
         } catch (IOException e) {
@@ -71,7 +74,6 @@ public class FileBasedList<T> implements List<T> {
         }
     }
 
-    // List 接口方法实现
     @Override
     public int size() {
         return size;
@@ -140,18 +142,31 @@ public class FileBasedList<T> implements List<T> {
 
     @Override
     public boolean add(T t) {
-        try (RandomAccessFile randomAccessFile = new RandomAccessFile(file, "rw")) {
-            randomAccessFile.seek(randomAccessFile.length()); // 跳转到文件末尾
-            long position = randomAccessFile.getFilePointer(); // 记录新行的起始位置
-            String json = gson.toJson(t); // 序列化为 JSON
-            randomAccessFile.write((json + System.lineSeparator()).getBytes("UTF-8")); // 追加一行，使用 UTF-8 编码
-            linePositions.add(position); // 记录新行的起始位置
-            size++; // 大小增加
-            return true;
-        } catch (IOException e) {
-            throw new RuntimeException("Failed to write to file", e);
+        buffer.add(t);
+        if (buffer.size() >= BUFFER_SIZE) {
+            flushBuffer();
         }
+        size++;
+        return true;
     }
+
+    /**
+     * 将缓存中的数据批量写入文件
+     */
+    private void flushBuffer() {
+    try (BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file, true), StandardCharsets.UTF_8))) {
+        for (T item : buffer) {
+            String json = gson.toJson(item);
+            writer.write(json);
+            writer.newLine(); // 写入换行符
+            linePositions.add(file.length()); // 记录新行的起始位置
+        }
+        writer.flush(); // 确保数据写入磁盘
+        buffer.clear(); // 清空缓存
+    } catch (IOException e) {
+        throw new RuntimeException("Failed to write to file", e);
+    }
+}
 
     @Override
     public boolean remove(Object o) {
@@ -197,6 +212,7 @@ public class FileBasedList<T> implements List<T> {
             writer.write(""); // 清空文件内容
             size = 0; // 大小重置为 0
             linePositions.clear(); // 清空文件位置记录
+            buffer.clear(); // 清空缓存
         } catch (IOException e) {
             throw new RuntimeException("Failed to clear file", e);
         }
@@ -276,7 +292,6 @@ public class FileBasedList<T> implements List<T> {
         return subList;
     }
 
-    // 其他方法
     public Stream<T> stream() {
         Spliterator<T> spliterator = Spliterators.spliteratorUnknownSize(iterator(), Spliterator.ORDERED);
         return StreamSupport.stream(spliterator, false); // 不支持并行流
