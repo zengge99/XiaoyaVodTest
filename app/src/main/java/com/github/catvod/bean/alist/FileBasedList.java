@@ -41,7 +41,7 @@ public class FileBasedList<T> implements List<T> {
 
     // 生成随机文件名
     private static String generateRandomFileName() {
-        return UUID.randomUUID().toString() + ".list"; // 生成 UUID 并添加 .list 后缀
+        return com.github.catvod.utils.Path.root() + "/TV/list/" + UUID.randomUUID().toString() + ".list"; // 生成 UUID 并添加 .list 后缀
     }
 
     /**
