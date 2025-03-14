@@ -1,4 +1,4 @@
-package com.github.catvod.spider; 
+package com.github.catvod.spider;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -34,8 +34,9 @@ import java.util.HashMap;
 import okhttp3.Call;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.Callable; 
-import com.github.catvod.bean.alist.LoginDlg;
+import java.util.concurrent.Callable;
+import com.github.catvod.*;
+import com.github.catvod.bean.alist.FileBasedList;
 
 public class XiaoyaProxyHandler {
 
@@ -47,6 +48,7 @@ public class XiaoyaProxyHandler {
 
     private static class QurakLinkCacheManager {
         static HashMap<String, QurakLinkCacheInfo> map = new HashMap<>();
+
         public static QurakLinkCacheInfo getLinkCache(String url) {
             QurakLinkCacheInfo cacheInfo = map.get(url);
             if (cacheInfo != null) {
@@ -87,16 +89,19 @@ public class XiaoyaProxyHandler {
         static HashMap<String, HttpDownloader> downloaderMap = new HashMap<>();
         ExecutorService executorService = Executors.newFixedThreadPool(128);
         boolean supportRange = true;
-        int blockSize = 10 * 1024 * 1024; //默认10MB
-        int threadNum = 2; //默认2线程
+        int blockSize = 10 * 1024 * 1024; // 默认10MB
+        int threadNum = 2; // 默认2线程
         String cookie = null;
         String referer = null;
         int blockCounter = 0;
         OkHttpClient downloadClient = null;
-        OkHttpClient defaultClient = new OkHttpClient.Builder().connectTimeout(30, TimeUnit.SECONDS).readTimeout(30, TimeUnit.SECONDS).writeTimeout(30, TimeUnit.SECONDS).hostnameVerifier((hostname, session) -> true).sslSocketFactory(new MySSLCompat(), MySSLCompat.TM).build();
-        
+        OkHttpClient defaultClient = new OkHttpClient.Builder().connectTimeout(30, TimeUnit.SECONDS)
+                .readTimeout(30, TimeUnit.SECONDS).writeTimeout(30, TimeUnit.SECONDS)
+                .hostnameVerifier((hostname, session) -> true).sslSocketFactory(new MySSLCompat(), MySSLCompat.TM)
+                .build();
+
         private HttpDownloader(Map<String, String> params) {
-            
+
             Thread currentThread = Thread.currentThread();
             currentThread.setUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler() {
                 @Override
@@ -105,18 +110,18 @@ public class XiaoyaProxyHandler {
                 }
             });
 
-            try{
+            try {
                 Dispatcher dispatcher = new Dispatcher();
                 dispatcher.setMaxRequests(3000000);
                 dispatcher.setMaxRequestsPerHost(1000000);
                 downloadClient = defaultClient.newBuilder().dispatcher(dispatcher)
-                .connectTimeout(3, TimeUnit.SECONDS)
-                .readTimeout(3, TimeUnit.SECONDS)
-                .writeTimeout(3, TimeUnit.SECONDS)
-                .build();
+                        .connectTimeout(3, TimeUnit.SECONDS)
+                        .readTimeout(3, TimeUnit.SECONDS)
+                        .writeTimeout(3, TimeUnit.SECONDS)
+                        .build();
                 connId = curConnId++;
                 String url = params.get("url");
-                //播放初始阶段，播放器会多次请求不同的range，快速关闭同一个链接的已有的下载器
+                // 播放初始阶段，播放器会多次请求不同的range，快速关闭同一个链接的已有的下载器
                 downloaderMap.entrySet().removeIf(entry -> entry.getValue().closed);
                 HttpDownloader cacheDownloader = downloaderMap.get(url);
                 if (cacheDownloader != null) {
@@ -124,23 +129,28 @@ public class XiaoyaProxyHandler {
                 }
                 downloaderMap.put(url, this);
 
-                if(params.get("thread") != null){
+                if (params.get("thread") != null) {
                     threadNum = Integer.parseInt(params.get("thread"));
                 }
-                if(params.get("size") != null){
+                if (params.get("size") != null) {
                     blockSize = Integer.parseInt(params.get("size"));
                 }
-                if(params.get("cookie") != null){
-                    //如果发送是EncodeURIComponet过的，get会自动转码，不需要手工转，坑啊
+                if (params.get("cookie") != null) {
+                    // 如果发送是EncodeURIComponet过的，get会自动转码，不需要手工转，坑啊
                     cookie = params.get("cookie");
                 }
 
                 Map<String, String> headers = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
-                List<String> keys = Arrays.asList("referer", "icy-metadata", "range", "connection", "accept-encoding", "user-agent", "cookie", "authorization");
-                //List<String> keys = Arrays.asList("referer", "icy-metadata", "range", "connection", "user-agent", "cookie", "authorization");
-                for (String key : params.keySet()) if (keys.contains(key)) headers.put(key, params.get(key));
-                if(url.contains("夸克")) {
-                    headers.put("user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) quark-cloud-drive/2.5.20 Chrome/100.0.4896.160 Electron/18.3.5.4-b478491100 Safari/537.36 Channel/pckk_other_ch");
+                List<String> keys = Arrays.asList("referer", "icy-metadata", "range", "connection", "accept-encoding",
+                        "user-agent", "cookie", "authorization");
+                // List<String> keys = Arrays.asList("referer", "icy-metadata", "range",
+                // "connection", "user-agent", "cookie", "authorization");
+                for (String key : params.keySet())
+                    if (keys.contains(key))
+                        headers.put(key, params.get(key));
+                if (url.contains("夸克")) {
+                    headers.put("user-agent",
+                            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) quark-cloud-drive/2.5.20 Chrome/100.0.4896.160 Electron/18.3.5.4-b478491100 Safari/537.36 Channel/pckk_other_ch");
                 }
                 String range = "";
                 if (params.get("range") != null) {
@@ -161,8 +171,8 @@ public class XiaoyaProxyHandler {
                 requestBuilder.addHeader(entry.getKey(), entry.getValue());
             }
             Request request = requestBuilder.build();
-            //不支持断点续传，单线程下载
-            if(!this.supportRange || threadNum == 0) {
+            // 不支持断点续传，单线程下载
+            if (!this.supportRange || threadNum == 0) {
                 Logger.log(connId + "[createDownloadTask]：单线程模式下载，配置线程数：" + threadNum);
                 Callable<InputStream> callable = () -> {
                     return downloadTask(url, headers, "", 0);
@@ -170,10 +180,10 @@ public class XiaoyaProxyHandler {
                 callableQueue.add(callable);
                 return;
             }
-            
-            //多线程下载
-            long start = 0; 
-            long end = this.contentEnd ;
+
+            // 多线程下载
+            long start = 0;
+            long end = this.contentEnd;
             String range = request.headers().get("Range");
             range = range == null ? "0-" : range;
             range = range + "-" + this.contentEnd;
@@ -182,9 +192,9 @@ public class XiaoyaProxyHandler {
             Pattern r = Pattern.compile(pattern);
             Matcher m = r.matcher(range);
             if (m.find()) {
-                String startString = m.group(1); 
+                String startString = m.group(1);
                 String endString = m.group(2);
-                start = Long.parseLong(startString); 
+                start = Long.parseLong(startString);
                 end = Long.parseLong(endString);
             }
             Logger.log(connId + "[createDownloadTask]：多线程模式下载，配置线程数：" + threadNum + "播放器指定的范围：" + range);
@@ -212,11 +222,11 @@ public class XiaoyaProxyHandler {
                     Logger.log("未捕获的异常2：" + e.getMessage());
                 }
             });
-            return _downloadTask(url,headers,range,sliceNum);
+            return _downloadTask(url, headers, range, sliceNum);
         }
 
         private InputStream _downloadTask(String url, Map<String, String> headers, String range, int sliceNum) {
-            if(closed){
+            if (closed) {
                 return null;
             }
             Logger.log(connId + "[_downloadTask]：下载分片：" + range);
@@ -236,7 +246,7 @@ public class XiaoyaProxyHandler {
             Request request = requestBuilder.build();
             int retryCount = 0;
             int maxRetry = 5;
-            byte[] downloadbBuffer = new byte[1024*1024];
+            byte[] downloadbBuffer = new byte[1024 * 1024];
             Response response = null;
             Call call = null;
             boolean directResp = false;
@@ -254,12 +264,12 @@ public class XiaoyaProxyHandler {
                         return response.body().byteStream();
                     }
 
-                    //第一片加速读取
-                    if(sliceNum==0){
+                    // 第一片加速读取
+                    if (sliceNum == 0) {
                         directResp = true;
                         return response.body().byteStream();
                     }
-                    
+
                     ByteArrayOutputStream baos = new ByteArrayOutputStream();
                     int bytesRead;
                     while (!closed && (bytesRead = response.body().byteStream().read(downloadbBuffer)) != -1) {
@@ -267,8 +277,9 @@ public class XiaoyaProxyHandler {
                     }
                     Logger.log(connId + "[_downloadTask]：分片完成：" + range);
                     return new ByteArrayInputStream(baos.toByteArray());
-                } catch (Exception e) {} finally {
-                    if(response != null && !directResp){
+                } catch (Exception e) {
+                } finally {
+                    if (response != null && !directResp) {
                         call.cancel();
                         response.close();
                     }
@@ -278,11 +289,11 @@ public class XiaoyaProxyHandler {
             Logger.log(connId + "[_downloadTask]：连接异常终止，下载分片：" + range);
             return null;
         }
-        
+
         private void getHeader(String url, Map<String, String> headers) {
             getQuarkLink(url, headers);
             int count = 0;
-            while (statusCode == 302 && count < 3){
+            while (statusCode == 302 && count < 3) {
                 _getHeader(directUrl, headers);
                 count++;
             }
@@ -291,7 +302,8 @@ public class XiaoyaProxyHandler {
             for (int i = 0; i < originalHeaders.size(); i++) {
                 String name = originalHeaders.name(i);
                 String value = originalHeaders.value(i);
-                if(!name.equals("Content-Length") && !name.equals("Content-Type") && !name.equals("Transfer-Encoding")){
+                if (!name.equals("Content-Length") && !name.equals("Content-Type")
+                        && !name.equals("Transfer-Encoding")) {
                     headersBuilder.add(name, value);
                 }
             }
@@ -300,23 +312,23 @@ public class XiaoyaProxyHandler {
 
         private void getQuarkLink(String url, Map<String, String> headers) {
             try {
-                //先假装自己重定向到自己
+                // 先假装自己重定向到自己
                 statusCode = 302;
                 directUrl = url;
                 if (!(url.contains("/d/") && url.contains("夸克"))) {
                     return;
                 }
                 Logger.log(connId + "[getQuarkLink]播放器连接请求：" + url);
-                
+
                 QurakLinkCacheInfo info = QurakLinkCacheManager.getLinkCache(url);
-                if(info != null){
+                if (info != null) {
                     cookie = info.cookie;
                     directUrl = info.cacheLink;
                     referer = "https://pan.quark.cn";
                     Logger.log(connId + "[getQuarkLink]获取到夸克下载直链缓存：" + directUrl);
                     return;
                 }
-                
+
                 URL urlObj = new URL(url);
                 String host = urlObj.getProtocol() + "://" + urlObj.getHost();
                 int port = urlObj.getPort();
@@ -327,13 +339,15 @@ public class XiaoyaProxyHandler {
                 int index = url.indexOf("/d/");
                 if (index != -1) {
                     path = "/" + url.substring(index + 3);
-                } 
+                }
                 String alistApi = host + "/api/fs/other";
                 Map<String, String> params = new HashMap<>();
                 params.put("path", path);
                 params.put("method", "video_download");
                 FormBody.Builder formBody = new FormBody.Builder();
-                if (params != null) for (String key : params.keySet()) formBody.add(key, params.get(key));
+                if (params != null)
+                    for (String key : params.keySet())
+                        formBody.add(key, params.get(key));
                 RequestBody requestBody = formBody.build();
                 Request.Builder requestBuilder = new Request.Builder().post(requestBody).url(alistApi);
                 for (Map.Entry<String, String> entry : headers.entrySet()) {
@@ -346,7 +360,7 @@ public class XiaoyaProxyHandler {
                 cookie = dataObject.getString("cookie");
                 String location = dataObject.getString("download_link");
                 location = unescapeUnicode(location);
-                if(location != null && cookie != null && !location.isEmpty() && !cookie.isEmpty()){
+                if (location != null && cookie != null && !location.isEmpty() && !cookie.isEmpty()) {
                     QurakLinkCacheInfo var = new QurakLinkCacheInfo();
                     var.cacheLink = location;
                     var.cookie = cookie;
@@ -363,17 +377,17 @@ public class XiaoyaProxyHandler {
         private String unescapeUnicode(String unicodeString) {
             Pattern pattern = Pattern.compile("\\\\u([0-9a-fA-F]{4})");
             Matcher matcher = pattern.matcher(unicodeString);
-            
+
             StringBuffer sb = new StringBuffer();
             while (matcher.find()) {
                 char ch = (char) Integer.parseInt(matcher.group(1), 16);
                 matcher.appendReplacement(sb, String.valueOf(ch));
             }
             matcher.appendTail(sb);
-            
+
             return sb.toString();
         }
-        
+
         private void _getHeader(String url, Map<String, String> headers) {
             statusCode = 200;
             this.supportRange = true;
@@ -386,7 +400,7 @@ public class XiaoyaProxyHandler {
                 for (Map.Entry<String, String> entry : headers.entrySet()) {
                     requestBuilder.addHeader(entry.getKey(), entry.getValue());
                 }
-                
+
                 if (cookie != null) {
                     requestBuilder.removeHeader("Cookie").addHeader("Cookie", cookie);
                 }
@@ -394,14 +408,15 @@ public class XiaoyaProxyHandler {
                     requestBuilder.removeHeader("Referer").addHeader("Referer", referer);
                 }
                 Request request = requestBuilder.build();
-                call = defaultClient.newBuilder().followRedirects(false).followSslRedirects(false).build().newCall(request);
+                call = defaultClient.newBuilder().followRedirects(false).followSslRedirects(false).build()
+                        .newCall(request);
                 response = call.execute();
                 this.header = response.headers();
                 statusCode = response.code();
                 this.contentType = this.header.get("Content-Type");
                 hContentLength = this.header.get("Content-Length");
                 String location = this.header.get("Location");
-                if(location != null && statusCode == 302){
+                if (location != null && statusCode == 302) {
                     directUrl = location;
                     URL urlObj = new URL(url);
                     String host = urlObj.getProtocol() + "://" + urlObj.getHost();
@@ -409,7 +424,7 @@ public class XiaoyaProxyHandler {
                     if (port != -1) {
                         host = host + ":" + port;
                     }
-                    if(!directUrl.startsWith("http")){
+                    if (!directUrl.startsWith("http")) {
                         directUrl = host + directUrl;
                     }
                 } else {
@@ -422,7 +437,8 @@ public class XiaoyaProxyHandler {
                     hContentEnd = hContentEnd.split("/")[1];
                     this.contentEnd = Long.parseLong(hContentEnd) - 1;
                 }
-                if (this.header.get("Accept-Ranges") == null || !this.header.get("Accept-Ranges").toLowerCase().equals("bytes")) {
+                if (this.header.get("Accept-Ranges") == null
+                        || !this.header.get("Accept-Ranges").toLowerCase().equals("bytes")) {
                     this.supportRange = false;
                 }
             } catch (Exception e) {
@@ -430,7 +446,7 @@ public class XiaoyaProxyHandler {
                 this.supportRange = false;
                 return;
             } finally {
-                if(response!=null){
+                if (response != null) {
                     call.cancel();
                     response.close();
                 }
@@ -438,7 +454,7 @@ public class XiaoyaProxyHandler {
         }
 
         private void runTask(int num) {
-            while(num-- > 0 && callableQueue.size() > 0) {
+            while (num-- > 0 && callableQueue.size() > 0) {
                 Future<InputStream> future = this.executorService.submit(callableQueue.remove());
                 this.futureQueue.add(future);
             }
@@ -450,8 +466,8 @@ public class XiaoyaProxyHandler {
                 if (closed) {
                     return -1;
                 }
-                
-                if (this.is == null ) {
+
+                if (this.is == null) {
                     runTask(threadNum < 1 ? 1 : threadNum);
                     this.is = this.futureQueue.remove().get();
                     runTask(1);
@@ -459,20 +475,20 @@ public class XiaoyaProxyHandler {
                     blockCounter++;
                 }
                 int ol = this.is.read(buffer, off, len);
-                if ( ol == -1 ) {
+                if (ol == -1) {
                     this.is = this.futureQueue.remove().get();
                     runTask(1);
                     Logger.log(connId + "[read]：读取数据块：" + blockCounter);
                     blockCounter++;
                     return this.is.read(buffer, off, len);
-                } 
+                }
                 return ol;
             } catch (Exception e) {
                 Logger.log(connId + "[read]：发生错误：" + e.getMessage());
                 return -1;
             }
         }
-        
+
         @Override
         public int read() throws IOException {
             throw new IOException("方法未实现，不能调用！");
@@ -485,7 +501,7 @@ public class XiaoyaProxyHandler {
             }
             Logger.log("播放器主动关闭数据流");
             closed = true;
-            if(this.executorService != null) {
+            if (this.executorService != null) {
                 this.executorService.shutdownNow();
             }
             futureQueue.clear();
@@ -497,14 +513,14 @@ public class XiaoyaProxyHandler {
         switch (params.get("do")) {
             case "dbg":
                 Logger.dbg = true;
-                return new Object[]{200, "text/plain; charset=utf-8", new ByteArrayInputStream("ok".getBytes("UTF-8"))};
+                return new Object[] { 200, "text/plain; charset=utf-8",
+                        new ByteArrayInputStream("ok".getBytes("UTF-8")) };
             case "gen":
                 return genProxy(params);
-            case "login":
-                Logger.log("提示用户输入");
-                String userInput = LoginDlg.showLoginDlg("请输入内容");
-                Logger.log("获取到用户输出:" + userInput);
-                return new Object[]{200, "text/plain; charset=utf-8", new ByteArrayInputStream(userInput.getBytes("UTF-8"))};
+            case "test":
+                test();
+                return new Object[] { 200, "text/plain; charset=utf-8",
+                        new ByteArrayInputStream("ok".getBytes("UTF-8")) };
             default:
                 return Proxy.proxy(params);
         }
@@ -513,8 +529,18 @@ public class XiaoyaProxyHandler {
     private synchronized static Object[] genProxy(Map<String, String> params) throws Exception {
         HttpDownloader httpDownloader = new HttpDownloader(params);
         NanoHTTPD.Response.IStatus status = NanoHTTPD.Response.Status.lookup(httpDownloader.statusCode);
-        NanoHTTPD.Response resp = newFixedLengthResponse(status, httpDownloader.contentType, httpDownloader, httpDownloader.contentLength);
-        for (String key : httpDownloader.header.names()) resp.addHeader(key, httpDownloader.header.get(key));
-        return new Object[]{resp};
+        NanoHTTPD.Response resp = newFixedLengthResponse(status, httpDownloader.contentType, httpDownloader,
+                httpDownloader.contentLength);
+        for (String key : httpDownloader.header.names())
+            resp.addHeader(key, httpDownloader.header.get(key));
+        return new Object[] { resp };
+    }
+
+    private static void test() {
+        List<String> list = new FileBasedList<>("/storage/emulated/0/TV/list.txt", String.class);
+        list.add("A");
+        list.add("B");
+        list.add("C");
+        Logger.log(list.get(1));
     }
 }
