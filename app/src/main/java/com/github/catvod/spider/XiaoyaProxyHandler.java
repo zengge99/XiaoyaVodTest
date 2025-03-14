@@ -38,6 +38,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.Callable;
 import com.github.catvod.*;
 import com.github.catvod.bean.alist.FileBasedList;
+import java.util.stream.Collectors;
 
 public class XiaoyaProxyHandler {
 
