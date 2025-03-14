@@ -41,6 +41,7 @@ import com.github.catvod.bean.alist.FileBasedList;
 import com.github.catvod.bean.alist.XiaoyaLocalIndex;
 import com.github.catvod.bean.alist.LazyFileList;
 import com.github.catvod.bean.alist.Drive;
+import com.github.catvod.bean.Vod;
 import java.util.stream.Collectors;
 
 public class XiaoyaProxyHandler {
@@ -565,7 +566,7 @@ public class XiaoyaProxyHandler {
         Logger.log("索引：" + il.getLineNumber() + " 内容：" + il.getItem());
 
         List<String> lines = new LazyFileList("/storage/emulated/0/TV/index.all.txt");
-        list = XiaoyaLocalIndex.toVods(new Drive("测试"), lines);
-        Logger.log(list.get(0));
+        FileBasedList<Vod> list1 = XiaoyaLocalIndex.toVods(new Drive("测试"), lines);
+        Logger.log(list1.get(0));
     }
 }
