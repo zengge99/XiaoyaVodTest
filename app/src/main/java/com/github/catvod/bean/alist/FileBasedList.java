@@ -2,16 +2,12 @@ package com.github.catvod.bean.alist;
 
 import com.google.gson.Gson;
 import java.io.*;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Spliterator;
-import java.util.Spliterators;
+import java.util.*;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
-public class FileBasedList<T> implements Iterable<T> {
+public class FileBasedList<T> implements List<T> {
     private final File file; // 存储数据的文件
     private final Gson gson; // Gson 用于序列化和反序列化
     private final Class<T> type; // 泛型类型
@@ -55,63 +51,28 @@ public class FileBasedList<T> implements Iterable<T> {
         }
     }
 
-    /**
-     * 向文件追加一个对象
-     */
-    public void add(T item) {
-        try (RandomAccessFile randomAccessFile = new RandomAccessFile(file, "rw")) {
-            randomAccessFile.seek(randomAccessFile.length()); // 跳转到文件末尾
-            long position = randomAccessFile.getFilePointer(); // 记录新行的起始位置
-            String json = gson.toJson(item); // 序列化为 JSON
-            randomAccessFile.writeBytes(json + System.lineSeparator()); // 追加一行
-            linePositions.add(position); // 记录新行的起始位置
-            size++; // 大小增加
-        } catch (IOException e) {
-            throw new RuntimeException("Failed to write to file", e);
-        }
-    }
+    // List 接口方法实现
 
-    /**
-     * 从文件中读取指定行的对象（快速访问）
-     */
-    public T get(int index) {
-        if (index < 0 || index >= size) {
-            throw new IndexOutOfBoundsException("Index " + index + " is out of bounds");
-        }
-
-        try (RandomAccessFile randomAccessFile = new RandomAccessFile(file, "r")) {
-            long position = linePositions.get(index); // 获取指定行的起始位置
-            randomAccessFile.seek(position); // 跳转到指定位置
-            String line = randomAccessFile.readLine(); // 读取一行
-            return gson.fromJson(line, type); // 反序列化为对象
-        } catch (IOException e) {
-            throw new RuntimeException("Failed to read from file", e);
-        }
-    }
-
-    /**
-     * 获取文件中的对象总数
-     */
+    @Override
     public int size() {
-        return size; // 直接返回维护的大小
+        return size;
     }
 
-    /**
-     * 清空文件中的所有数据
-     */
-    public void clear() {
-        try (FileWriter writer = new FileWriter(file)) {
-            writer.write(""); // 清空文件内容
-            size = 0; // 大小重置为 0
-            linePositions.clear(); // 清空文件位置记录
-        } catch (IOException e) {
-            throw new RuntimeException("Failed to clear file", e);
+    @Override
+    public boolean isEmpty() {
+        return size == 0;
+    }
+
+    @Override
+    public boolean contains(Object o) {
+        for (T item : this) {
+            if (Objects.equals(item, o)) {
+                return true;
+            }
         }
+        return false;
     }
 
-    /**
-     * 实现 Iterable 接口，返回一个 Iterator
-     */
     @Override
     public Iterator<T> iterator() {
         try {
@@ -140,36 +101,173 @@ public class FileBasedList<T> implements Iterable<T> {
         }
     }
 
-    /**
-     * 实现 forEach 方法
-     */
     @Override
-    public void forEach(Consumer<? super T> action) {
-        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                T item = gson.fromJson(line, type); // 反序列化为对象
-                action.accept(item); // 执行操作
+    public Object[] toArray() {
+        List<T> list = new ArrayList<>();
+        for (T item : this) {
+            list.add(item);
+        }
+        return list.toArray();
+    }
+
+    @Override
+    public <T1> T1[] toArray(T1[] a) {
+        List<T> list = new ArrayList<>();
+        for (T item : this) {
+            list.add(item);
+        }
+        return list.toArray(a);
+    }
+
+    @Override
+    public boolean add(T t) {
+        try (RandomAccessFile randomAccessFile = new RandomAccessFile(file, "rw")) {
+            randomAccessFile.seek(randomAccessFile.length()); // 跳转到文件末尾
+            long position = randomAccessFile.getFilePointer(); // 记录新行的起始位置
+            String json = gson.toJson(t); // 序列化为 JSON
+            randomAccessFile.writeBytes(json + System.lineSeparator()); // 追加一行
+            linePositions.add(position); // 记录新行的起始位置
+            size++; // 大小增加
+            return true;
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to write to file", e);
+        }
+    }
+
+    @Override
+    public boolean remove(Object o) {
+        throw new UnsupportedOperationException("Remove operation is not supported.");
+    }
+
+    @Override
+    public boolean containsAll(Collection<?> c) {
+        for (Object o : c) {
+            if (!contains(o)) {
+                return false;
             }
+        }
+        return true;
+    }
+
+    @Override
+    public boolean addAll(Collection<? extends T> c) {
+        for (T item : c) {
+            add(item);
+        }
+        return true;
+    }
+
+    @Override
+    public boolean addAll(int index, Collection<? extends T> c) {
+        throw new UnsupportedOperationException("AddAll at index is not supported.");
+    }
+
+    @Override
+    public boolean removeAll(Collection<?> c) {
+        throw new UnsupportedOperationException("RemoveAll operation is not supported.");
+    }
+
+    @Override
+    public boolean retainAll(Collection<?> c) {
+        throw new UnsupportedOperationException("RetainAll operation is not supported.");
+    }
+
+    @Override
+    public void clear() {
+        try (FileWriter writer = new FileWriter(file)) {
+            writer.write(""); // 清空文件内容
+            size = 0; // 大小重置为 0
+            linePositions.clear(); // 清空文件位置记录
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to clear file", e);
+        }
+    }
+
+    @Override
+    public T get(int index) {
+        if (index < 0 || index >= size) {
+            throw new IndexOutOfBoundsException("Index " + index + " is out of bounds");
+        }
+
+        try (RandomAccessFile randomAccessFile = new RandomAccessFile(file, "r")) {
+            long position = linePositions.get(index); // 获取指定行的起始位置
+            randomAccessFile.seek(position); // 跳转到指定位置
+            String line = randomAccessFile.readLine(); // 读取一行
+            return gson.fromJson(line, type); // 反序列化为对象
         } catch (IOException e) {
             throw new RuntimeException("Failed to read from file", e);
         }
     }
 
-    /**
-     * 返回一个流，支持 filter、map 等操作
-     */
+    @Override
+    public T set(int index, T element) {
+        throw new UnsupportedOperationException("Set operation is not supported.");
+    }
+
+    @Override
+    public void add(int index, T element) {
+        throw new UnsupportedOperationException("Add at index is not supported.");
+    }
+
+    @Override
+    public T remove(int index) {
+        throw new UnsupportedOperationException("Remove at index is not supported.");
+    }
+
+    @Override
+    public int indexOf(Object o) {
+        int index = 0;
+        for (T item : this) {
+            if (Objects.equals(item, o)) {
+                return index;
+            }
+            index++;
+        }
+        return -1;
+    }
+
+    @Override
+    public int lastIndexOf(Object o) {
+        int lastIndex = -1;
+        int index = 0;
+        for (T item : this) {
+            if (Objects.equals(item, o)) {
+                lastIndex = index;
+            }
+            index++;
+        }
+        return lastIndex;
+    }
+
+    @Override
+    public ListIterator<T> listIterator() {
+        throw new UnsupportedOperationException("ListIterator is not supported.");
+    }
+
+    @Override
+    public ListIterator<T> listIterator(int index) {
+        throw new UnsupportedOperationException("ListIterator at index is not supported.");
+    }
+
+    @Override
+    public List<T> subList(int fromIndex, int toIndex) {
+        List<T> subList = new ArrayList<>();
+        for (int i = fromIndex; i < toIndex; i++) {
+            subList.add(get(i));
+        }
+        return subList;
+    }
+
+    // 其他方法
+
     public Stream<T> stream() {
         Spliterator<T> spliterator = Spliterators.spliteratorUnknownSize(iterator(), Spliterator.ORDERED);
         return StreamSupport.stream(spliterator, false); // 不支持并行流
     }
 
-    /**
-     * 带行号的数据结构
-     */
     public static class IndexedItem<T> {
-        private final T item; // 对象
-        private final int lineNumber; // 行号
+        private final T item;
+        private final int lineNumber;
 
         public IndexedItem(T item, int lineNumber) {
             this.item = item;
@@ -185,39 +283,36 @@ public class FileBasedList<T> implements Iterable<T> {
         }
     }
 
-    /**
-     * 返回一个包含行号的流
-     */
     public Stream<IndexedItem<T>> indexedStream() {
         try {
             BufferedReader reader = new BufferedReader(new FileReader(file));
-            Spliterator<IndexedItem<T>> spliterator = Spliterators.spliteratorUnknownSize(new Iterator<IndexedItem<T>>() {
-                private String nextLine = reader.readLine(); // 读取第一行
-                private int currentLineNumber = 0; // 当前行号
+            Spliterator<IndexedItem<T>> spliterator = Spliterators
+                    .spliteratorUnknownSize(new Iterator<IndexedItem<T>>() {
+                        private String nextLine = reader.readLine(); // 读取第一行
+                        private int currentLineNumber = 0; // 当前行号
 
-                @Override
-                public boolean hasNext() {
-                    return nextLine != null;
-                }
+                        @Override
+                        public boolean hasNext() {
+                            return nextLine != null;
+                        }
 
-                @Override
-                public IndexedItem<T> next() {
-                    try {
-                        T item = gson.fromJson(nextLine, type); // 反序列化为对象
-                        IndexedItem<T> indexedItem = new IndexedItem<>(item, currentLineNumber);
-                        nextLine = reader.readLine(); // 读取下一行
-                        currentLineNumber++; // 行号增加
-                        return indexedItem;
-                    } catch (IOException e) {
-                        throw new RuntimeException("Failed to read next line", e);
-                    }
-                }
-            }, Spliterator.ORDERED);
+                        @Override
+                        public IndexedItem<T> next() {
+                            try {
+                                T item = gson.fromJson(nextLine, type); // 反序列化为对象
+                                IndexedItem<T> indexedItem = new IndexedItem<>(item, currentLineNumber);
+                                nextLine = reader.readLine(); // 读取下一行
+                                currentLineNumber++; // 行号增加
+                                return indexedItem;
+                            } catch (IOException e) {
+                                throw new RuntimeException("Failed to read next line", e);
+                            }
+                        }
+                    }, Spliterator.ORDERED);
 
             return StreamSupport.stream(spliterator, false); // 不支持并行流
         } catch (IOException e) {
             throw new RuntimeException("Failed to initialize indexed stream", e);
         }
     }
-
 }
