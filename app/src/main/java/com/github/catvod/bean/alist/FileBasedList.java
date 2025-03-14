@@ -20,6 +20,15 @@ public class FileBasedList<T> implements List<T> {
         this.type = type;
         this.linePositions = new ArrayList<>();
 
+        // 确保文件的父目录存在，如果不存在则创建所有缺失的父目录
+        File parentDir = file.getParentFile();
+        if (parentDir != null && !parentDir.exists()) {
+            boolean dirsCreated = parentDir.mkdirs(); // 创建所有缺失的父目录
+            if (!dirsCreated) {
+                throw new RuntimeException("Failed to create parent directories: " + parentDir.getAbsolutePath());
+            }
+        }
+
         // 如果文件不存在，则创建
         if (!file.exists()) {
             try {
@@ -41,7 +50,9 @@ public class FileBasedList<T> implements List<T> {
 
     // 生成随机文件名
     private static String generateRandomFileName() {
-        return com.github.catvod.utils.Path.root() + "/TV/list/" + UUID.randomUUID().toString() + ".list"; // 生成 UUID 并添加 .list 后缀
+        return com.github.catvod.utils.Path.root() + "/TV/list/" + UUID.randomUUID().toString() + ".list"; // 生成 UUID
+                                                                                                           // 并添加 .list
+                                                                                                           // 后缀
     }
 
     /**
