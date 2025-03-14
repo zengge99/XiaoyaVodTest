@@ -167,11 +167,11 @@ public class FileBasedList<T> implements List<T> {
 
             for (T item : buffer) {
                 linePositions.add(currentPosition); // 记录新行的起始位置
-                String json = gson.toJson(item);
+                String json = gson.toJson(item) + "\n";
                 int lineLength = json.getBytes(StandardCharsets.UTF_8).length
                         + System.lineSeparator().getBytes(StandardCharsets.UTF_8).length; // 计算该行的总长度
                 writer.write(json);
-                writer.newLine(); // 写入换行符
+                //writer.newLine(); // 写入换行符
                 currentPosition += lineLength; // 更新当前位置
             }
 
