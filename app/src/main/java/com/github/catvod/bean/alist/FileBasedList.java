@@ -168,6 +168,7 @@ public class FileBasedList<T> implements List<T> {
                 writer.write(json);
                 writer.newLine(); // 写入换行符
                 linePositions.add(file.length()); // 记录新行的起始位置
+                Logger.log("文件位置：" + file.length());
             }
             writer.flush(); // 确保数据写入磁盘
             buffer.clear(); // 清空缓存
