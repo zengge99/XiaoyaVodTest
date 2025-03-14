@@ -138,10 +138,10 @@ public class XiaoyaLocalIndex {
     }
 
     public static List<Vod> toVods(Drive drive, List<String> lines) {
-        //FileBasedList<Vod> list = new FileBasedList<>(Vod.class);
-        //FileBasedList<Vod> noPicList = new FileBasedList<>(Vod.class);
-        List<Vod> list = new ArrayList<>();
-        List<Vod> noPicList = new ArrayList<>();
+        FileBasedList<Vod> list = new FileBasedList<>(Vod.class);
+        FileBasedList<Vod> noPicList = new FileBasedList<>(Vod.class);
+        //List<Vod> list = new ArrayList<>();
+        //List<Vod> noPicList = new ArrayList<>();
         
         for (String line : lines) {
             String[] splits = line.split("#");

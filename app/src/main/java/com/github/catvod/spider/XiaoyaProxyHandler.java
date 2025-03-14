@@ -560,5 +560,9 @@ public class XiaoyaProxyHandler {
                 .get(0); // 获取第一个匹配项
 
         Logger.log("索引：" + il.getLineNumber() + " 内容：" + il.getItem());
+
+        List<String> lines = new LazyFileList("/storage/emulated/0/TV/index.all.txt");
+        list = XiaoyaLocalIndex.toVods(new Drive("测试"), lines);
+        Logger.log(list.get(0));
     }
 }
