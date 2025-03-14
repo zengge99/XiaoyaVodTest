@@ -168,9 +168,8 @@ public class FileBasedList<T> implements List<T> {
             for (T item : buffer) {
                 linePositions.add(currentPosition); // 记录新行的起始位置
                 String json = gson.toJson(item) + "\n";
-                byte[] bb = json.getBytes(StandardCharsets.UTF_8);
-                writer.write(bb);
-                currentPosition += bb.length; // 更新当前位置
+                writer.write(json);
+                currentPosition += json.getBytes(StandardCharsets.UTF_8).length; // 更新当前位置
             }
 
             writer.flush(); // 最终确保所有缓冲的数据都已写入文件
@@ -237,11 +236,21 @@ public class FileBasedList<T> implements List<T> {
             throw new IndexOutOfBoundsException("Index " + index + " is out of bounds");
         }
         flushBuffer();
-        try (RandomAccessFile randomAccessFile = new RandomAccessFile(file, "r")) {
+        try (
+                RandomAccessFile randomAccessFile = new RandomAccessFile(file, "r");
+                InputStreamReader reader = new InputStreamReader(new FileInputStream(randomAccessFile.getFD()), StandardCharsets.UTF_8);
+                BufferedReader bufferedReader = new BufferedReader(reader)
+        ) {
             long position = linePositions.get(index); // 获取指定行的起始位置
             randomAccessFile.seek(position); // 跳转到指定位置
-            String line = randomAccessFile.readLine(); // 读取一行
-            return gson.fromJson(line, type); // 反序列化为对象
+
+            String line;
+            while ((line = bufferedReader.readLine()) != null) {
+                return gson.fromJson(line, type); // 反序列化为对象
+            }
+
+            throw new IllegalStateException("Failed to read the specified line");
+
         } catch (IOException e) {
             throw new RuntimeException("Failed to read from file", e);
         }
