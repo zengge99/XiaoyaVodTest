@@ -571,15 +571,15 @@ public class XiaoyaProxyHandler {
         Logger.log(list1.get(0));
 
         List<Vod> filteredVods = new ArrayList<>();
-            startTime = System.currentTimeMillis();
-            for (Vod vod : vods) {
-                if (!vod.getVodIdWithoutDrivePrefix().contains("向风而行")) {
-                    continue;
-                }
-                filteredVods.add(vod);
+        startTime = System.currentTimeMillis();
+        for (Vod vod : vods) {
+            if (!vod.getVodIdWithoutDrivePrefix().contains("向风而行")) {
+                continue;
             }
-            duration = System.currentTimeMillis() - startTime;
-            Logger.log("转换Vod耗时：" + duration);
-            Logger.log(filteredVods);
+            filteredVods.add(vod);
+        }
+        duration = System.currentTimeMillis() - startTime;
+        Logger.log("转换Vod耗时：" + duration);
+        Logger.log(filteredVods);
     }
 }
